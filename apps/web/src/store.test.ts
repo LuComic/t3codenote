@@ -60,6 +60,7 @@ function makeState(thread: Thread): AppState {
           provider: "codex",
           model: "gpt-5-codex",
         },
+        note: "",
         scripts: [],
       },
     ],
@@ -137,6 +138,7 @@ function makeReadModel(thread: OrchestrationReadModel["threads"][number]): Orche
           provider: "codex",
           model: "gpt-5.3-codex",
         },
+        note: "",
         createdAt: "2026-02-27T00:00:00.000Z",
         updatedAt: "2026-02-27T00:00:00.000Z",
         deletedAt: null,
@@ -161,6 +163,7 @@ function makeReadModelProject(
     createdAt: "2026-02-27T00:00:00.000Z",
     updatedAt: "2026-02-27T00:00:00.000Z",
     deletedAt: null,
+    note: "",
     scripts: [],
     ...overrides,
   };
@@ -262,6 +265,7 @@ describe("store read model sync", () => {
             provider: "codex",
             model: DEFAULT_MODEL_BY_PROVIDER.codex,
           },
+          note: "",
           scripts: [],
         },
         {
@@ -272,6 +276,7 @@ describe("store read model sync", () => {
             provider: "codex",
             model: DEFAULT_MODEL_BY_PROVIDER.codex,
           },
+          note: "",
           scripts: [],
         },
       ],
@@ -349,6 +354,27 @@ describe("incremental orchestration updates", () => {
     expect(next.projects[0]?.updatedAt).toBe("2026-02-27T00:00:01.000Z");
   });
 
+  it("updates the existing project note when project.meta-updated arrives", () => {
+    const projectId = ProjectId.makeUnsafe("project-1");
+    const state = makeState(
+      makeThread({
+        projectId,
+      }),
+    );
+
+    const next = applyOrchestrationEvent(
+      state,
+      makeEvent("project.meta-updated", {
+        projectId,
+        note: "# Notes\n\nremember this",
+        updatedAt: "2026-02-27T00:00:01.000Z",
+      }),
+    );
+
+    expect(next.projects[0]?.note).toBe("# Notes\n\nremember this");
+    expect(next.projects[0]?.updatedAt).toBe("2026-02-27T00:00:01.000Z");
+  });
+
   it("preserves state identity for no-op project and thread deletes", () => {
     const thread = makeThread();
     const state = makeState(thread);
@@ -385,6 +411,7 @@ describe("incremental orchestration updates", () => {
             provider: "codex",
             model: DEFAULT_MODEL_BY_PROVIDER.codex,
           },
+          note: "",
           scripts: [],
         },
       ],
@@ -404,6 +431,7 @@ describe("incremental orchestration updates", () => {
           provider: "codex",
           model: DEFAULT_MODEL_BY_PROVIDER.codex,
         },
+        note: "",
         scripts: [],
         createdAt: "2026-02-27T00:00:01.000Z",
         updatedAt: "2026-02-27T00:00:01.000Z",
@@ -434,6 +462,7 @@ describe("incremental orchestration updates", () => {
             provider: "codex",
             model: DEFAULT_MODEL_BY_PROVIDER.codex,
           },
+          note: "",
           scripts: [],
         },
         {
@@ -444,6 +473,7 @@ describe("incremental orchestration updates", () => {
             provider: "codex",
             model: DEFAULT_MODEL_BY_PROVIDER.codex,
           },
+          note: "",
           scripts: [],
         },
       ],

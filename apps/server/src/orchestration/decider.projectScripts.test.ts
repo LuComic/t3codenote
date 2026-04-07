@@ -38,6 +38,7 @@ describe("decider project scripts", () => {
     const event = Array.isArray(result) ? result[0] : result;
     expect(event.type).toBe("project.created");
     expect((event.payload as { scripts: unknown[] }).scripts).toEqual([]);
+    expect((event.payload as { note: string }).note).toBe("");
   });
 
   it("propagates scripts in project.meta.update payload", async () => {
@@ -61,6 +62,7 @@ describe("decider project scripts", () => {
           workspaceRoot: "/tmp/scripts",
           defaultModelSelection: null,
           scripts: [],
+          note: "",
           createdAt: now,
           updatedAt: now,
         },
@@ -94,6 +96,51 @@ describe("decider project scripts", () => {
     expect((event.payload as { scripts?: unknown[] }).scripts).toEqual(scripts);
   });
 
+  it("propagates notes in project.meta.update payload", async () => {
+    const now = new Date().toISOString();
+    const initial = createEmptyReadModel(now);
+    const readModel = await Effect.runPromise(
+      projectEvent(initial, {
+        sequence: 1,
+        eventId: asEventId("evt-project-create-note"),
+        aggregateKind: "project",
+        aggregateId: asProjectId("project-note"),
+        type: "project.created",
+        occurredAt: now,
+        commandId: CommandId.makeUnsafe("cmd-project-create-note"),
+        causationEventId: null,
+        correlationId: CommandId.makeUnsafe("cmd-project-create-note"),
+        metadata: {},
+        payload: {
+          projectId: asProjectId("project-note"),
+          title: "Notes",
+          workspaceRoot: "/tmp/project-note",
+          defaultModelSelection: null,
+          scripts: [],
+          note: "",
+          createdAt: now,
+          updatedAt: now,
+        },
+      }),
+    );
+
+    const result = await Effect.runPromise(
+      decideOrchestrationCommand({
+        command: {
+          type: "project.meta.update",
+          commandId: CommandId.makeUnsafe("cmd-project-update-note"),
+          projectId: asProjectId("project-note"),
+          note: "line 1\nline 2",
+        },
+        readModel,
+      }),
+    );
+
+    const event = Array.isArray(result) ? result[0] : result;
+    expect(event.type).toBe("project.meta-updated");
+    expect((event.payload as { note?: string }).note).toBe("line 1\nline 2");
+  });
+
   it("emits user message and turn-start-requested events for thread.turn.start", async () => {
     const now = new Date().toISOString();
     const initial = createEmptyReadModel(now);
@@ -115,6 +162,7 @@ describe("decider project scripts", () => {
           workspaceRoot: "/tmp/project",
           defaultModelSelection: null,
           scripts: [],
+          note: "",
           createdAt: now,
           updatedAt: now,
         },
@@ -224,6 +272,7 @@ describe("decider project scripts", () => {
           workspaceRoot: "/tmp/project",
           defaultModelSelection: null,
           scripts: [],
+          note: "",
           createdAt: now,
           updatedAt: now,
         },
@@ -306,6 +355,7 @@ describe("decider project scripts", () => {
           workspaceRoot: "/tmp/project",
           defaultModelSelection: null,
           scripts: [],
+          note: "",
           createdAt: now,
           updatedAt: now,
         },

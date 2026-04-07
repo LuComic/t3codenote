@@ -2,6 +2,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { watch } from "node:fs";
 import { join } from "node:path";
 
+import { acquireSingleProcessLock } from "./dev-process-lock.mjs";
 import { desktopDir, resolveElectronPath } from "./electron-launcher.mjs";
 import { waitForResources } from "./wait-for-resources.mjs";
 
@@ -19,6 +20,11 @@ const watchedDirectories = [
 const forcedShutdownTimeoutMs = 1_500;
 const restartDebounceMs = 120;
 const childTreeGracePeriodMs = 1_200;
+const releaseProcessLock = await acquireSingleProcessLock({
+  baseDir: desktopDir,
+  lockName: "dev-electron",
+  commandMatch: `${desktopDir}/scripts/dev-electron.mjs`,
+});
 
 await waitForResources({
   baseDir: desktopDir,
@@ -57,22 +63,28 @@ function startApp() {
     return;
   }
 
-  const app = spawn(
-    resolveElectronPath(),
-    [`--t3code-dev-root=${desktopDir}`, "dist-electron/main.js"],
-    {
-      cwd: desktopDir,
-      env: {
-        ...childEnv,
-        VITE_DEV_SERVER_URL: devServerUrl,
-      },
-      stdio: "inherit",
+  let electronPath;
+  try {
+    electronPath = resolveElectronPath();
+  } catch (error) {
+    console.error("[desktop-dev] failed to resolve Electron binary", error);
+    scheduleRestart();
+    return;
+  }
+
+  const app = spawn(electronPath, [`--t3code-dev-root=${desktopDir}`, "dist-electron/main.js"], {
+    cwd: desktopDir,
+    env: {
+      ...childEnv,
+      VITE_DEV_SERVER_URL: devServerUrl,
     },
-  );
+    stdio: "inherit",
+  });
 
   currentApp = app;
 
-  app.once("error", () => {
+  app.once("error", (error) => {
+    console.error("[desktop-dev] Electron failed to launch", error);
     if (currentApp === app) {
       currentApp = null;
     }
@@ -199,6 +211,7 @@ async function shutdown(exitCode) {
     setTimeout(resolve, childTreeGracePeriodMs);
   });
   killChildTree("KILL");
+  await releaseProcessLock();
 
   process.exit(exitCode);
 }

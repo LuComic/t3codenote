@@ -252,6 +252,7 @@ describe("wsNativeApi", () => {
           model: "gpt-5-codex",
         },
         scripts: [],
+        note: "",
         createdAt: "2026-02-24T00:00:00.000Z",
         updatedAt: "2026-02-24T00:00:00.000Z",
       },

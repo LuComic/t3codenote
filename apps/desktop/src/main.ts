@@ -198,6 +198,31 @@ function getSafeTheme(rawTheme: unknown): DesktopTheme | null {
   return null;
 }
 
+function getExistingWindow(): BrowserWindow | null {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    return mainWindow;
+  }
+
+  const existingWindow = BrowserWindow.getAllWindows()[0];
+  if (!existingWindow) {
+    return null;
+  }
+
+  mainWindow = existingWindow;
+  return existingWindow;
+}
+
+function ensureMainWindow(): BrowserWindow {
+  const existingWindow = getExistingWindow();
+  if (existingWindow) {
+    return existingWindow;
+  }
+
+  const window = createWindow();
+  mainWindow = window;
+  return window;
+}
+
 function writeDesktopStreamChunk(
   streamName: "stdout" | "stderr",
   chunk: unknown,
@@ -532,12 +557,8 @@ function registerDesktopProtocol(): void {
 }
 
 function dispatchMenuAction(action: string): void {
-  const existingWindow =
-    BrowserWindow.getFocusedWindow() ?? mainWindow ?? BrowserWindow.getAllWindows()[0];
-  const targetWindow = existingWindow ?? createWindow();
-  if (!existingWindow) {
-    mainWindow = targetWindow;
-  }
+  const existingWindow = BrowserWindow.getFocusedWindow() ?? getExistingWindow();
+  const targetWindow = existingWindow ?? ensureMainWindow();
 
   const send = () => {
     if (targetWindow.isDestroyed()) return;
@@ -576,9 +597,7 @@ function handleCheckForUpdatesMenuClick(): void {
     return;
   }
 
-  if (!BrowserWindow.getAllWindows().length) {
-    mainWindow = createWindow();
-  }
+  ensureMainWindow();
   void checkForUpdatesFromMenu();
 }
 
@@ -1445,7 +1464,7 @@ async function bootstrap(): Promise<void> {
   writeDesktopLogHeader("bootstrap ipc handlers registered");
   startBackend();
   writeDesktopLogHeader("bootstrap backend start requested");
-  mainWindow = createWindow();
+  mainWindow = ensureMainWindow();
   writeDesktopLogHeader("bootstrap main window created");
 }
 
@@ -1471,9 +1490,16 @@ app
     });
 
     app.on("activate", () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
-        mainWindow = createWindow();
+      const window = getExistingWindow();
+      if (window) {
+        if (!window.isVisible()) {
+          window.show();
+        }
+        window.focus();
+        return;
       }
+
+      mainWindow = createWindow();
     });
   })
   .catch((error) => {

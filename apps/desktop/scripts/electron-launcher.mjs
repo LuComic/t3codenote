@@ -16,10 +16,13 @@ import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const isDevelopment = Boolean(process.env.VITE_DEV_SERVER_URL);
+const isDevelopment = Boolean(
+  process.env.VITE_DEV_SERVER_URL || process.env.ELECTRON_RENDERER_PORT,
+);
 const APP_DISPLAY_NAME = isDevelopment ? "T3 Code (Dev)" : "T3 Code (Alpha)";
-const APP_BUNDLE_ID = "com.t3tools.t3code";
-const LAUNCHER_VERSION = 1;
+const APP_BUNDLE_ID = isDevelopment ? "com.t3tools.t3code.dev" : "com.t3tools.t3code";
+const RUNTIME_VARIANT = isDevelopment ? "dev" : "alpha";
+const LAUNCHER_VERSION = 2;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const desktopDir = resolve(__dirname, "..");
@@ -97,18 +100,49 @@ function readJson(path) {
   }
 }
 
+function removeLegacyRuntimeBundles(runtimeRoot) {
+  for (const appName of ["T3 Code (Alpha).app", "T3 Code (Dev).app"]) {
+    rmSync(join(runtimeRoot, appName), { recursive: true, force: true });
+  }
+}
+
+function removeStaleRuntimeBundles(runtimeDir, currentAppBundlePath) {
+  if (!existsSync(runtimeDir)) {
+    return;
+  }
+
+  for (const entry of readdirSync(runtimeDir, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !entry.name.endsWith(".app")) {
+      continue;
+    }
+
+    const entryPath = join(runtimeDir, entry.name);
+    if (entryPath === currentAppBundlePath) {
+      continue;
+    }
+
+    rmSync(entryPath, { recursive: true, force: true });
+  }
+}
+
 function buildMacLauncher(electronBinaryPath) {
   const sourceAppBundlePath = resolve(electronBinaryPath, "../../..");
-  const runtimeDir = join(desktopDir, ".electron-runtime");
+  const runtimeRoot = join(desktopDir, ".electron-runtime");
+  const runtimeDir = join(runtimeRoot, RUNTIME_VARIANT);
   const targetAppBundlePath = join(runtimeDir, `${APP_DISPLAY_NAME}.app`);
   const targetBinaryPath = join(targetAppBundlePath, "Contents", "MacOS", "Electron");
   const iconPath = join(desktopDir, "resources", "icon.icns");
   const metadataPath = join(runtimeDir, "metadata.json");
 
   mkdirSync(runtimeDir, { recursive: true });
+  removeLegacyRuntimeBundles(runtimeRoot);
+  removeStaleRuntimeBundles(runtimeDir, targetAppBundlePath);
 
   const expectedMetadata = {
+    appBundleId: APP_BUNDLE_ID,
+    appDisplayName: APP_DISPLAY_NAME,
     launcherVersion: LAUNCHER_VERSION,
+    runtimeVariant: RUNTIME_VARIANT,
     sourceAppBundlePath,
     sourceAppMtimeMs: statSync(sourceAppBundlePath).mtimeMs,
     iconMtimeMs: statSync(iconPath).mtimeMs,

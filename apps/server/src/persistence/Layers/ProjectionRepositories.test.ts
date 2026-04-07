@@ -32,6 +32,7 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
           model: "gpt-5.4",
         },
         scripts: [],
+        note: "# project note",
         createdAt: "2026-03-24T00:00:00.000Z",
         updatedAt: "2026-03-24T00:00:00.000Z",
         deletedAt: null,
@@ -39,8 +40,11 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
 
       const rows = yield* sql<{
         readonly defaultModelSelection: string | null;
+        readonly note: string;
       }>`
-        SELECT default_model_selection_json AS "defaultModelSelection"
+        SELECT
+          default_model_selection_json AS "defaultModelSelection",
+          note
         FROM projection_projects
         WHERE project_id = 'project-null-options'
       `;
@@ -56,6 +60,7 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
           model: "gpt-5.4",
         }),
       );
+      assert.strictEqual(row.note, "# project note");
 
       const persisted = yield* projects.getById({
         projectId: ProjectId.makeUnsafe("project-null-options"),
@@ -64,6 +69,7 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
         provider: "codex",
         model: "gpt-5.4",
       });
+      assert.strictEqual(Option.getOrNull(persisted)?.note, "# project note");
     }),
   );
 

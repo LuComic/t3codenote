@@ -6,7 +6,7 @@ import {
 } from "@t3tools/contracts";
 import { memo } from "react";
 import GitActionsControl from "../GitActionsControl";
-import { DiffIcon, TerminalSquareIcon } from "lucide-react";
+import { DiffIcon, TerminalSquareIcon, Pencil } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import ProjectScriptsControl, { type NewProjectScriptInput } from "../ProjectScriptsControl";
@@ -30,12 +30,15 @@ interface ChatHeaderProps {
   diffToggleShortcutLabel: string | null;
   gitCwd: string | null;
   diffOpen: boolean;
+  noteOpen: boolean;
+  notesAvailable: boolean;
   onRunProjectScript: (script: ProjectScript) => void;
   onAddProjectScript: (input: NewProjectScriptInput) => Promise<void>;
   onUpdateProjectScript: (scriptId: string, input: NewProjectScriptInput) => Promise<void>;
   onDeleteProjectScript: (scriptId: string) => Promise<void>;
   onToggleTerminal: () => void;
-  onToggleDiff: () => void;
+  onToggleDiff: (pressed?: boolean) => void;
+  onToggleNote: (pressed?: boolean) => void;
 }
 
 export const ChatHeader = memo(function ChatHeader({
@@ -54,12 +57,15 @@ export const ChatHeader = memo(function ChatHeader({
   diffToggleShortcutLabel,
   gitCwd,
   diffOpen,
+  noteOpen,
+  notesAvailable,
   onRunProjectScript,
   onAddProjectScript,
   onUpdateProjectScript,
   onDeleteProjectScript,
   onToggleTerminal,
   onToggleDiff,
+  onToggleNote,
 }: ChatHeaderProps) {
   return (
     <div className="@container/header-actions flex min-w-0 flex-1 items-center gap-2">
@@ -132,7 +138,7 @@ export const ChatHeader = memo(function ChatHeader({
               <Toggle
                 className="shrink-0"
                 pressed={diffOpen}
-                onPressedChange={onToggleDiff}
+                onPressedChange={(pressed) => onToggleDiff(pressed)}
                 aria-label="Toggle diff panel"
                 variant="outline"
                 size="xs"
@@ -148,6 +154,28 @@ export const ChatHeader = memo(function ChatHeader({
               : diffToggleShortcutLabel
                 ? `Toggle diff panel (${diffToggleShortcutLabel})`
                 : "Toggle diff panel"}
+          </TooltipPopup>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Toggle
+                className="shrink-0"
+                pressed={noteOpen}
+                onPressedChange={(pressed) => onToggleNote(pressed)}
+                aria-label="Toggle note panel"
+                variant="outline"
+                size="xs"
+                disabled={!notesAvailable}
+              >
+                <Pencil className="size-3" />
+              </Toggle>
+            }
+          />
+          <TooltipPopup side="bottom">
+            {!notesAvailable
+              ? "Notes are unavailable until this thread has an active project."
+              : "Toggle notes"}
           </TooltipPopup>
         </Tooltip>
       </div>

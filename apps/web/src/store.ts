@@ -187,6 +187,7 @@ function mapProject(project: OrchestrationReadModel["projects"][number]): Projec
     defaultModelSelection: project.defaultModelSelection
       ? normalizeModelSelection(project.defaultModelSelection)
       : null,
+    note: project.note,
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
     scripts: mapProjectScripts(project.scripts),
@@ -604,6 +605,7 @@ export function applyOrchestrationEvent(state: AppState, event: OrchestrationEve
         workspaceRoot: event.payload.workspaceRoot,
         defaultModelSelection: event.payload.defaultModelSelection,
         scripts: event.payload.scripts,
+        note: event.payload.note,
         createdAt: event.payload.createdAt,
         updatedAt: event.payload.updatedAt,
         deletedAt: null,
@@ -632,6 +634,7 @@ export function applyOrchestrationEvent(state: AppState, event: OrchestrationEve
         ...(event.payload.scripts !== undefined
           ? { scripts: mapProjectScripts(event.payload.scripts) }
           : {}),
+        ...(event.payload.note !== undefined ? { note: event.payload.note } : {}),
         updatedAt: event.payload.updatedAt,
       }));
       return projects === state.projects ? state : { ...state, projects };
